@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Portafolio">
+<meta name="theme-color" content="#0a0a0a" id="themeColorMeta">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon.svg">
+<title>Portafolio</title>
+<link id="googleFont" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a; --surface: #111; --surface2: #1a1a1a; --border: #222;
+  --accent: #c8f135; --accent-dim: rgba(200,241,53,0.1);
+  --text: #f0f0f0; --muted: #666; --input-bg: #1a1a1a;
+  --font-display: 'Syne', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
+}
+
+html { height: 100%; }
+
+body {
+  background: var(--bg); color: var(--text); font-family: var(--font-display);
+  min-height: 100vh; padding: calc(16px + var(--safe-top)) 16px calc(80px + var(--safe-bottom));
+  max-width: 700px; margin: 0 auto; transition: background 0.3s, color 0.3s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── HEADER ───────────────────────────────────────────── */
+header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--border);
+}
+.header-left h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; cursor: pointer; }
+.header-left h1:active { opacity: 0.6; }
+.header-left .date { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 3px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+.icon-btn {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  font-size: 15px; min-width: 36px; height: 36px; border-radius: 8px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; padding: 0 10px; gap: 5px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+}
+.icon-btn:active { background: var(--surface2); }
+.icon-btn.accent { border-color: var(--accent); color: var(--accent); }
+
+.spin { display: inline-block; }
+.spin.active { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── MODALES ───────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  z-index: 100; display: none; align-items: flex-end; justify-content: center;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.overlay.open { display: flex; }
+
+.sheet {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0; width: 100%; max-width: 700px;
+  padding: 20px 18px calc(24px + var(--safe-bottom));
+  max-height: 90vh; overflow-y: auto; animation: slideUp 0.22s ease;
+}
+@keyframes slideUp { from { transform: translateY(30px); opacity: 0; } }
+
+.sheet-handle {
+  width: 36px; height: 4px; background: var(--border); border-radius: 2px;
+  margin: 0 auto 18px;
+}
+.sheet-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+}
+.sheet-title { font-size: 15px; font-weight: 700; }
+.sheet-close {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.section-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+}
+
+/* ─── PANEL PERSONALIZACIÓN ─────────────────────────────── */
+.font-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.font-opt {
+  background: var(--surface2); border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; cursor: pointer; transition: all 0.15s;
+}
+.font-opt.active { border-color: var(--accent); background: var(--accent-dim); }
+.font-opt .fn { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.font-opt .fp { font-size: 10px; color: var(--muted); }
+
+.color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+.color-opt {
+  border: 2px solid var(--border); border-radius: 8px; padding: 10px 6px;
+  cursor: pointer; text-align: center; background: var(--surface2); transition: all 0.15s;
+}
+.color-opt.active { border-color: var(--text); }
+.color-swatch { width: 26px; height: 26px; border-radius: 50%; margin: 0 auto 5px; }
+.color-label { font-family: var(--font-mono); font-size: 9px; color: var(--muted); }
+
+.tema-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.tema-opt {
+  border: 1.5px solid var(--border); border-radius: 8px; padding: 12px;
+  cursor: pointer; display: flex; align-items: center; gap: 10px; background: var(--surface2);
+}
+.tema-opt.active { border-color: var(--accent); background: var(--accent-dim); }
+.tema-dot { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #444; flex-shrink: 0; }
+.tema-lbl { font-size: 13px; font-weight: 600; }
+
+.nombre-input {
+  background: var(--input-bg); border: 1.5px solid var(--border); color: var(--text);
+  font-family: var(--font-display); font-size: 15px; font-weight: 700;
+  padding: 11px 14px; border-radius: 8px; outline: none; width: 100%; margin-bottom: 20px;
+}
+.nombre-input:focus { border-color: var(--accent); }
+
+/* ─── TOTAL CARD ──────────────────────────────────────── */
+.total-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 22px 20px 18px; margin-bottom: 12px;
+  position: relative; overflow: hidden;
+}
+.total-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
+.total-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.total-lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.total-amt { font-family: var(--font-mono); font-size: 32px; font-weight: 500; color: var(--accent); letter-spacing: -0.02em; line-height: 1; }
+.total-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 7px; }
+.total-sec { text-align: right; padding-left: 12px; border-left: 1px solid var(--border); flex-shrink: 0; }
+.sec-amt { font-family: var(--font-mono); font-size: 18px; font-weight: 500; color: var(--text); letter-spacing: -0.01em; }
+.sec-note { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* ─── RATES ───────────────────────────────────────────── */
+.rates { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.rate-pill {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  padding: 7px 10px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); flex: 1; min-width: 100px;
+}
+.rate-pill span { color: var(--text); font-weight: 500; display: block; margin-top: 2px; font-size: 12px; }
+
+/* ─── CARDS ───────────────────────────────────────────── */
+.cards { display: grid; gap: 10px; margin-bottom: 18px; }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 18px; transition: border-color 0.2s;
+  position: relative;
+}
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.card-tag { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-family: var(--font-mono); margin-bottom: 3px; }
+.card-name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 2px; }
+.card-detail { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.card-pct { font-family: var(--font-mono); font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+.card-amt { font-family: var(--font-mono); font-size: 20px; font-weight: 500; letter-spacing: -0.02em; }
+
+/* Colores por capital */
+.c-green  { color: var(--accent); }
+.c-yellow { color: #f1c835; }
+.c-blue   { color: #4a9eff; }
+.c-orange { color: #ff8844; }
+.c-violet { color: #b794f4; }
+.c-cyan   { color: #00e5ff; }
+.c-rose   { color: #f687b3; }
+.c-teal   { color: #2dd4bf; }
+.c-white  { color: var(--text); }
+
+.card-delete {
+  position: absolute; top: 12px; right: 12px;
+  background: none; border: none; color: var(--border); cursor: pointer;
+  font-size: 16px; line-height: 1; transition: color 0.2s; padding: 2px 4px;
+}
+.card-delete:hover { color: #ff4444; }
+
+/* Flujo */
+.flujo-bar { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.flujo-lbl { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+.flujo-prog { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.flujo-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.8s ease; }
+
+/* CD edit */
+.inline-edit { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.inline-edit input {
+  background: var(--input-bg); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--font-mono); font-size: 12px; padding: 7px 10px; border-radius: 6px; outline: none; flex: 1;
+}
+.inline-edit input:focus { border-color: var(--accent); }
+.btn-sm {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--font-mono); font-size: 11px; padding: 7px 12px; border-radius: 6px;
+  cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.btn-sm:active { border-color: var(--accent); color: var(--accent); }
+
+/* ─── FORMULARIOS ─────────────────────────────────────── */
+.form-section { margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+.form-group select, .form-group input {
+  background: var(--input-bg); border: 1.5px solid var(--border); color: var(--text);
+  font-family: var(--font-mono); font-size: 13px; padding: 10px 12px; border-radius: 8px;
+  outline: none; transition: border-color 0.2s; width: 100%; -webkit-appearance: none;
+}
+.form-group select:focus, .form-group input:focus { border-color: var(--accent); }
+
+.btn-primary {
+  background: var(--accent); color: #000; border: none;
+  font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 12px 20px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 4px;
+  transition: opacity 0.2s;
+}
+.btn-primary:active { opacity: 0.8; }
+
+/* ─── HISTORIAL ───────────────────────────────────────── */
+.historial { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.h-item { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 12px; }
+.h-item:last-child { border-bottom: none; }
+.h-left { display: flex; flex-direction: column; gap: 2px; }
+.h-cap { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.h-desc { color: var(--text); }
+.h-date { font-size: 10px; color: var(--muted); }
+.h-amt { color: var(--accent); font-weight: 500; }
+.h-del { background: none; border: none; color: var(--border); cursor: pointer; font-size: 18px; padding: 0 0 0 10px; transition: color 0.2s; }
+.h-del:active { color: #ff4444; }
+
+.empty { padding: 20px; text-align: center; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+/* Status dot */
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 5px; }
+.dot.live { background: var(--accent); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ─── PIN SCREEN ──────────────────────────────────────── */
+#pinScreen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 999; padding: 40px 24px;
+}
+.pin-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 32px; font-family: var(--font-mono);
+}
+.pin-dots {
+  display: flex; gap: 14px; margin-bottom: 40px;
+}
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--border); background: transparent; transition: all 0.15s;
+}
+.pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+.pin-dot.error { background: #ff4444; border-color: #ff4444; animation: shake 0.3s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+.pin-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 280px;
+}
+.pin-key {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--font-mono); font-size: 20px; font-weight: 500;
+  height: 64px; border-radius: 12px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; transition: all 0.1s;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.pin-key:active { background: var(--surface2); border-color: var(--accent); transform: scale(0.96); }
+.pin-key.del { font-size: 18px; color: var(--muted); }
+.pin-key.empty { pointer-events: none; background: transparent; border-color: transparent; }
+
+/* ─── BOTTOM NAV ──────────────────────────────────────── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 10px 16px calc(10px + var(--safe-bottom));
+  display: flex; gap: 10px; max-width: 700px; margin: 0 auto;
+  z-index: 50;
+}
+.nav-btn {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); font-family: var(--font-mono); font-size: 11px;
+  padding: 10px; border-radius: 8px; cursor: pointer; display: flex;
+  flex-direction: column; align-items: center; gap: 3px; transition: all 0.2s;
+  letter-spacing: 0.04em;
+}
+.nav-btn .nav-icon { font-size: 16px; }
+.nav-btn:active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.nav-btn.accent { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* Divider */
+.divider { height: 1px; background: var(--border); margin: 18px 0; }
+</style>
+</head>
+<body id="body">
+
+<!-- ═══ PANEL PERSONALIZACIÓN ═══════════════════════════════ -->
+<div class="overlay" id="panelOverlay" onclick="overlayClose(event,'panelOverlay')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Personalización</div>
+      <button class="sheet-close" onclick="closeOverlay('panelOverlay')">×</button>
+    </div>
+
+    <div class="section-label">Nombre</div>
+    <input class="nombre-input" id="nombreInput" type="text" placeholder="Mi Portafolio" oninput="actualizarNombre()"/>
+
+    <div class="section-label">Modo</div>
+    <div class="tema-grid" style="margin-bottom:20px">
+      <div class="tema-opt" id="tDark" onclick="setTema('dark')">
+        <div class="tema-dot" style="background:#0a0a0a"></div><span class="tema-lbl">Oscuro</span>
+      </div>
+      <div class="tema-opt" id="tLight" onclick="setTema('light')">
+        <div class="tema-dot" style="background:#f5f5f0;border-color:#ccc"></div><span class="tema-lbl">Claro</span>
+      </div>
+    </div>
+
+    <div class="section-label">Color de acento</div>
+    <div class="color-grid" id="colorGrid"></div>
+
+    <div class="section-label">Tipografía</div>
+    <div class="font-grid" id="fontGrid"></div>
+  </div>
+</div>
+
+<!-- ═══ PANEL AGREGAR ACTIVO ════════════════════════════════ -->
+<div class="overlay" id="activoOverlay" onclick="overlayClose(event,'activoOverlay')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Agregar Activo</div>
+      <button class="sheet-close" onclick="closeOverlay('activoOverlay')">×</button>
+    </div>
+
+    <div class="form-section">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" id="aName" placeholder="ej. Ethereum"/>
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="aType" onchange="onTipoChange()">
+            <option value="crypto">Crypto</option>
+            <option value="ticker">Acción / Fondo (ticker)</option>
+            <option value="manual">Manual (cash, otro)</option>
+            <option value="cd">Inmueble / CD</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Capital</label>
+          <select id="aCapital">
+            <option value="CD">CD · Defensivo</option>
+            <option value="CL">CL · Líquido</option>
+            <option value="CO">CO · Ofensivo</option>
+            <option value="CT">CT · Trading</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Color</label>
+          <select id="aColor">
+            <option value="c-green">Verde</option>
+            <option value="c-yellow">Amarillo</option>
+            <option value="c-blue">Azul</option>
+            <option value="c-orange">Naranja</option>
+            <option value="c-violet">Violeta</option>
+            <option value="c-cyan">Cyan</option>
+            <option value="c-rose">Rosa</option>
+            <option value="c-teal">Teal</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Crypto -->
+      <div id="cryptoFields" class="form-section">
+        <div class="form-row">
+          <div class="form-group">
+            <label>CoinGecko ID</label>
+            <input type="text" id="aCoinId" placeholder="ej. ethereum, solana"/>
+          </div>
+          <div class="form-group">
+            <label>Cantidad</label>
+            <input type="number" id="aCryptoQty" placeholder="0.00"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ticker -->
+      <div id="tickerFields" class="form-section" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ticker Yahoo Finance</label>
+            <input type="text" id="aTicker" placeholder="ej. AAPL, GBMF2BF.MX"/>
+          </div>
+          <div class="form-group">
+            <label>Cantidad (títulos)</label>
+            <input type="number" id="aTickerQty" placeholder="0"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manual -->
+      <div id="manualFields" class="form-section" style="display:none">
+        <div class="form-row" style="grid-template-columns:1fr">
+          <div class="form-group">
+            <label>Valor (MXN)</label>
+            <input type="number" id="aManualVal" placeholder="0.00"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- CD/Inmueble -->
+      <div id="cdFields" class="form-section" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Valor mercado (MXN)</label>
+            <input type="number" id="aCDVal" placeholder="0.00"/>
+          </div>
+          <div class="form-group">
+            <label>Flujo mensual (MXN)</label>
+            <input type="number" id="aCDFlujo" placeholder="0.00"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:10px">
+        <label>Descripción / detalle</label>
+        <input type="text" id="aDesc" placeholder="ej. Cartera principal, Fondo deuda..."/>
+      </div>
+
+      <button class="btn-primary" onclick="agregarActivo()">+ Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PANEL APORTES ════════════════════════════════════════ -->
+<div class="overlay" id="aporteOverlay" onclick="overlayClose(event,'aporteOverlay')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Registrar Aportación</div>
+      <button class="sheet-close" onclick="closeOverlay('aporteOverlay')">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Capital</label>
+        <select id="apCapital">
+          <option value="CD">CD</option><option value="CL">CL</option>
+          <option value="CO">CO</option><option value="CT">CT</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Monto (MXN)</label>
+        <input type="number" id="apMonto" placeholder="0.00"/>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Concepto</label>
+      <input type="text" id="apDesc" placeholder="ej. Aportación marzo..."/>
+    </div>
+    <button class="btn-primary" onclick="registrarAporte()">+ Registrar</button>
+    <div class="divider"></div>
+    <div class="section-label">Historial</div>
+    <div class="historial" id="historial"><div class="empty">Sin aportes</div></div>
+  </div>
+</div>
+
+<!-- ═══ PIN SCREEN ════════════════════════════════════════ -->
+<div id="pinScreen">
+  <div class="pin-title">Ingresa tu PIN</div>
+  <div class="pin-dots" id="pinDots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+    <div class="pin-dot" id="pd4"></div>
+    <div class="pin-dot" id="pd5"></div>
+  </div>
+  <div class="pin-grid">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <button class="pin-key empty"></button>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+</div>
+
+<!-- ═══ CONTENIDO PRINCIPAL ═════════════════════════════════ -->
+<header>
+  <div class="header-left">
+    <h1 id="portNombre" onclick="openOverlay('panelOverlay')">Portafolio</h1>
+    <div class="date" id="fecha"></div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="openOverlay('panelOverlay')">⚙</button>
+    <button class="icon-btn" id="refreshBtn" onclick="cargarDatos()">
+      <span class="spin" id="spinIcon">↻</span> Act.
+    </button>
+  </div>
+</header>
+
+<div class="total-card">
+  <div class="total-row">
+    <div>
+      <div class="total-lbl">Capital Total</div>
+      <div class="total-amt" id="totalAmt">—</div>
+      <div class="total-sub" id="totalSub">Cargando...</div>
+    </div>
+    <div class="total-sec">
+      <div class="total-lbl" style="text-align:right">Sin inmuebles</div>
+      <div class="sec-amt" id="totalSin">—</div>
+      <div class="sec-note" id="totalSinLabel">activos líquidos</div>
+    </div>
+  </div>
+</div>
+
+<div class="rates" id="rates"></div>
+<div class="cards" id="cards"></div>
+
+<!-- ═══ BOTTOM NAV ═════════════════════════════════════════ -->
+<div class="bottom-nav">
+  <button class="nav-btn" onclick="openOverlay('aporteOverlay')">
+    <span class="nav-icon">+</span>Aporte
+  </button>
+  <button class="nav-btn accent" onclick="openOverlay('activoOverlay')">
+    <span class="nav-icon">◈</span>Activo
+  </button>
+  <button class="nav-btn" onclick="openOverlay('panelOverlay')">
+    <span class="nav-icon">⚙</span>Config
+  </button>
+</div>
+
+<script>
+// ═══ DATOS ════════════════════════════════════════════════
+const FUENTES = [
+  { id:'syne',    nm:'Syne',           g:'Syne:wght@400;600;700;800',             p:'Moderno / Geo' },
+  { id:'inter',   nm:'Inter',          g:'Inter:wght@400;600;700',                p:'Limpio / Neutro' },
+  { id:'playfair',nm:'Playfair',       g:'Playfair+Display:wght@400;600;700',     p:'Elegante / Serif' },
+  { id:'dm',      nm:'DM Sans',        g:'DM+Sans:wght@400;500;700',              p:'Suave / Editorial' },
+  { id:'space',   nm:'Space Grotesk',  g:'Space+Grotesk:wght@400;500;700',        p:'Técnico / Bold' },
+  { id:'outfit',  nm:'Outfit',         g:'Outfit:wght@400;600;700',               p:'Amigable / Round' },
+  { id:'raleway', nm:'Raleway',        g:'Raleway:wght@400;600;700',              p:'Clásico / Largo' },
+  { id:'manrope', nm:'Manrope',        g:'Manrope:wght@400;500;700',              p:'Humanista / Cálido' },
+  { id:'bebas',   nm:'Bebas Neue',     g:'Bebas+Neue',                            p:'Display / Impacto' },
+  { id:'cabinet', nm:'Cabinet Grotesk',g:'Cabinet+Grotesk:wght@400;500;700',      p:'Contemporáneo' },
+];
+
+const COLORES = [
+  { id:'lime',    nm:'Lima',      dk:'#c8f135', lt:'#2a6e00' },
+  { id:'cyan',    nm:'Cyan',      dk:'#00e5ff', lt:'#006080' },
+  { id:'violet',  nm:'Violeta',   dk:'#b794f4', lt:'#5a2d82' },
+  { id:'rose',    nm:'Rosa',      dk:'#f687b3', lt:'#9b2335' },
+  { id:'amber',   nm:'Ámbar',     dk:'#fbbf24', lt:'#8a5200' },
+  { id:'emerald', nm:'Esmeralda', dk:'#34d399', lt:'#065f46' },
+  { id:'sky',     nm:'Cielo',     dk:'#38bdf8', lt:'#0c4a6e' },
+  { id:'coral',   nm:'Coral',     dk:'#fb7185', lt:'#881337' },
+  { id:'white',   nm:'Blanco',    dk:'#ffffff', lt:'#111111' },
+  { id:'gold',    nm:'Oro',       dk:'#f5c518', lt:'#7a5a00' },
+  { id:'teal',    nm:'Teal',      dk:'#2dd4bf', lt:'#134e4a' },
+  { id:'indigo',  nm:'Índigo',    dk:'#818cf8', lt:'#312e81' },
+];
+
+// ═══ ESTADO ════════════════════════════════════════════════
+const CFG = JSON.parse(localStorage.getItem('cfg') || '{}');
+const PREF = {
+  nombre:   CFG.nombre   || 'Portafolio',
+  tema:     CFG.tema     || 'dark',
+  colorId:  CFG.colorId  || 'lime',
+  fuenteId: CFG.fuenteId || 'syne',
+};
+
+// Activos por defecto
+const DEFAULT_ACTIVOS = [
+  { id:'cd_montebello', nombre:'Inmueble Montebello', capital:'CD', tipo:'cd', valor:2900000, flujoMensual:14000, desc:'Valor de mercado estimado · Mérida, Yucatán', color:'c-green', protegido:true },
+  { id:'cl_gbm', nombre:'GBM Fondo Corto Plazo', capital:'CL', tipo:'ticker', ticker:'GBMF2BF.MX', cantidad:88970.91, desc:'88,970.91 títulos · GBMF2BF.MX', color:'c-yellow', protegido:true },
+  { id:'co_btc', nombre:'Bitcoin', capital:'CO', tipo:'crypto', coinId:'bitcoin', cantidad:0.06181291, desc:'0.06181291 BTC', color:'c-blue', protegido:true },
+  { id:'ct_sparrow', nombre:'Bitso Sparrow', capital:'CT', tipo:'crypto', coinId:'bitcoin', cantidad:0.00448695, desc:'0.00448695 BTC · Sparrow', color:'c-orange', protegido:true },
+];
+
+let ACTIVOS = JSON.parse(localStorage.getItem('activos') || 'null') || DEFAULT_ACTIVOS;
+let APORTES = JSON.parse(localStorage.getItem('aportes') || '[]');
+
+const PRECIOS = {}; // coinId o ticker -> precio MXN
+
+// ═══ OVERLAYS ══════════════════════════════════════════════
+function openOverlay(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'panelOverlay') renderPanel();
+  if (id === 'aporteOverlay') renderHistorial();
+}
+function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+function overlayClose(e, id) { if (e.target === document.getElementById(id)) closeOverlay(id); }
+
+// ═══ PERSONALIZACIÓN ═══════════════════════════════════════
+function renderPanel() {
+  document.getElementById('nombreInput').value = PREF.nombre;
+  document.getElementById('tDark').classList.toggle('active', PREF.tema === 'dark');
+  document.getElementById('tLight').classList.toggle('active', PREF.tema === 'light');
+
+  document.getElementById('colorGrid').innerHTML = COLORES.map(c => `
+    <div class="color-opt ${c.id === PREF.colorId ? 'active' : ''}" onclick="setColor('${c.id}')">
+      <div class="color-swatch" style="background:${PREF.tema === 'dark' ? c.dk : c.lt}"></div>
+      <div class="color-label">${c.nm}</div>
+    </div>`).join('');
+
+  document.getElementById('fontGrid').innerHTML = FUENTES.map(f => `
+    <div class="font-opt ${f.id === PREF.fuenteId ? 'active' : ''}" onclick="setFuente('${f.id}')" style="font-family:'${f.nm}',sans-serif">
+      <div class="fn">${f.nm}</div><div class="fp">${f.p}</div>
+    </div>`).join('');
+}
+
+function savePref() { localStorage.setItem('cfg', JSON.stringify(PREF)); }
+
+function aplicarTema() {
+  const b = document.getElementById('body');
+  const dk = PREF.tema === 'dark';
+  b.style.setProperty('--bg',       dk ? '#0a0a0a'  : '#f5f5f0');
+  b.style.setProperty('--surface',  dk ? '#111111'  : '#ffffff');
+  b.style.setProperty('--surface2', dk ? '#1a1a1a'  : '#f0f0eb');
+  b.style.setProperty('--border',   dk ? '#222222'  : '#e0e0d8');
+  b.style.setProperty('--text',     dk ? '#f0f0f0'  : '#1a1a1a');
+  b.style.setProperty('--muted',    dk ? '#666666'  : '#888888');
+  b.style.setProperty('--input-bg', dk ? '#1a1a1a'  : '#f0f0eb');
+  const col = COLORES.find(c => c.id === PREF.colorId) || COLORES[0];
+  const acc = dk ? col.dk : col.lt;
+  b.style.setProperty('--accent', acc);
+  b.style.setProperty('--accent-dim', acc + '18');
+  document.getElementById('themeColorMeta').content = dk ? '#0a0a0a' : '#f5f5f0';
+}
+
+function setTema(t) { PREF.tema = t; savePref(); aplicarTema(); renderPanel(); }
+function setColor(id) { PREF.colorId = id; savePref(); aplicarTema(); renderPanel(); }
+
+function aplicarFuente() {
+  const f = FUENTES.find(x => x.id === PREF.fuenteId) || FUENTES[0];
+  document.getElementById('googleFont').href =
+    `https://fonts.googleapis.com/css2?family=${f.g}&family=JetBrains+Mono:wght@300;400;500&display=swap`;
+  document.getElementById('body').style.setProperty('--font-display', `'${f.nm}', sans-serif`);
+}
+function setFuente(id) { PREF.fuenteId = id; savePref(); aplicarFuente(); renderPanel(); }
+
+function actualizarNombre() {
+  PREF.nombre = document.getElementById('nombreInput').value.trim() || 'Portafolio';
+  document.getElementById('portNombre').textContent = PREF.nombre;
+  document.title = PREF.nombre;
+  savePref();
+}
+
+// ═══ AGREGAR ACTIVO ════════════════════════════════════════
+function onTipoChange() {
+  const t = document.getElementById('aType').value;
+  document.getElementById('cryptoFields').style.display  = t === 'crypto'  ? '' : 'none';
+  document.getElementById('tickerFields').style.display  = t === 'ticker'  ? '' : 'none';
+  document.getElementById('manualFields').style.display  = t === 'manual'  ? '' : 'none';
+  document.getElementById('cdFields').style.display      = t === 'cd'      ? '' : 'none';
+}
+
+function agregarActivo() {
+  const nombre = document.getElementById('aName').value.trim();
+  const tipo   = document.getElementById('aType').value;
+  const capital= document.getElementById('aCapital').value;
+  const color  = document.getElementById('aColor').value;
+  const desc   = document.getElementById('aDesc').value.trim();
+  if (!nombre) return;
+
+  const activo = { id: 'a_' + Date.now(), nombre, capital, tipo, color, desc, protegido: false };
+
+  if (tipo === 'crypto') {
+    activo.coinId   = document.getElementById('aCoinId').value.trim().toLowerCase();
+    activo.cantidad = parseFloat(document.getElementById('aCryptoQty').value) || 0;
+  } else if (tipo === 'ticker') {
+    activo.ticker   = document.getElementById('aTicker').value.trim().toUpperCase();
+    activo.cantidad = parseFloat(document.getElementById('aTickerQty').value) || 0;
+  } else if (tipo === 'manual') {
+    activo.valor    = parseFloat(document.getElementById('aManualVal').value) || 0;
+  } else if (tipo === 'cd') {
+    activo.valor        = parseFloat(document.getElementById('aCDVal').value) || 0;
+    activo.flujoMensual = parseFloat(document.getElementById('aCDFlujo').value) || 0;
+  }
+
+  ACTIVOS.push(activo);
+  localStorage.setItem('activos', JSON.stringify(ACTIVOS));
+  closeOverlay('activoOverlay');
+  cargarDatos();
+}
+
+function eliminarActivo(id) {
+  if (!confirm('¿Eliminar este activo?')) return;
+  ACTIVOS = ACTIVOS.filter(a => a.id !== id);
+  localStorage.setItem('activos', JSON.stringify(ACTIVOS));
+  cargarDatos();
+}
+
+function actualizarValorCD(id) {
+  const val = parseFloat(document.getElementById('edit_' + id).value);
+  if (!val || val <= 0) return;
+  const a = ACTIVOS.find(x => x.id === id);
+  if (a) { a.valor = val; localStorage.setItem('activos', JSON.stringify(ACTIVOS)); cargarDatos(); }
+}
+
+// ═══ PIN ═══════════════════════════════════════════════════
+const PIN_HASH = '4e92e4a3f0e2e87a3e9c9b7c0e1f2a3b'; // no usado, comparamos directo con hash
+const PIN_CORRECT = btoa('809070'); // ofuscado base64
+let pinInput = '';
+const PIN_LEN = 6;
+
+// Verificar si ya autenticó en esta sesión
+if (sessionStorage.getItem('auth') === PIN_CORRECT) {
+  document.getElementById('pinScreen').style.display = 'none';
+}
+
+function pinKey(d) {
+  if (pinInput.length >= PIN_LEN) return;
+  pinInput += d;
+  updatePinDots();
+  if (pinInput.length === PIN_LEN) {
+    setTimeout(() => checkPin(), 120);
+  }
+}
+
+function pinDel() {
+  pinInput = pinInput.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots() {
+  for (let i = 0; i < PIN_LEN; i++) {
+    const dot = document.getElementById('pd' + i);
+    dot.classList.toggle('filled', i < pinInput.length);
+    dot.classList.remove('error');
+  }
+}
+
+function checkPin() {
+  if (btoa(pinInput) === PIN_CORRECT) {
+    sessionStorage.setItem('auth', PIN_CORRECT);
+    const screen = document.getElementById('pinScreen');
+    screen.style.opacity = '0';
+    screen.style.transition = 'opacity 0.3s';
+    setTimeout(() => screen.style.display = 'none', 300);
+  } else {
+    for (let i = 0; i < PIN_LEN; i++) document.getElementById('pd' + i).classList.add('error');
+    setTimeout(() => { pinInput = ''; updatePinDots(); }, 600);
+  }
+}
+
+// ═══ CARGAR DATOS ══════════════════════════════════════════
+// Fallback precios (actualizados manualmente)
+const FALLBACK = {
+  bitcoin: 1680000,      // ~$84,000 USD * 20 MXN aprox
+  'GBMF2BF.MX': 1.09,
+};
+let PRECIO_FX = 17.17;
+
+async function cargarDatos() {
+  const btn = document.getElementById('refreshBtn');
+  const spin = document.getElementById('spinIcon');
+  btn.classList.add('loading');
+  spin.classList.add('active');
+
+  // Recopilar qué necesitamos pedir
+  const coinIds = [...new Set(ACTIVOS.filter(a => a.tipo === 'crypto').map(a => a.coinId))];
+  const tickers = [...new Set(ACTIVOS.filter(a => a.tipo === 'ticker').map(a => a.ticker))];
+
+  // Aplicar fallback primero — siempre habrá valores
+  coinIds.forEach(id => { if (!PRECIOS[id] && FALLBACK[id]) PRECIOS[id] = FALLBACK[id]; });
+  tickers.forEach(t => { if (!PRECIOS[t] && FALLBACK[t]) PRECIOS[t] = FALLBACK[t]; });
+
+  // BTC + crypto via CoinGecko
+  if (coinIds.length) {
+    try {
+      const ids = coinIds.join(',');
+      const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=mxn`,
+        { signal: AbortSignal.timeout(7000) });
+      const data = await res.json();
+      coinIds.forEach(id => { if (data[id]?.mxn) PRECIOS[id] = data[id].mxn; });
+      // FX implícito de BTC
+      if (data.bitcoin?.mxn && data.bitcoin?.usd) PRECIO_FX = data.bitcoin.mxn / data.bitcoin.usd;
+    } catch(e) {}
+  }
+
+  // FX fallback independiente
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD', { signal: AbortSignal.timeout(5000) });
+    const data = await res.json();
+    if (data.rates?.MXN) PRECIO_FX = data.rates.MXN;
+  } catch(e) {}
+
+  // Tickers via Yahoo Finance
+  for (const ticker of tickers) {
+    for (const host of ['query1', 'query2']) {
+      try {
+        const res = await fetch(`https://${host}.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`,
+          { signal: AbortSignal.timeout(5000) });
+        const data = await res.json();
+        const p = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+        if (p && p > 0) { PRECIOS[ticker] = p; break; }
+      } catch(e) {}
+    }
+  }
+
+  renderUI();
+  btn.classList.remove('loading');
+  spin.classList.remove('active');
+}
+
+// ═══ RENDER PRINCIPAL ══════════════════════════════════════
+function calcValorActivo(a) {
+  if (a.tipo === 'crypto') return (PRECIOS[a.coinId] || 0) * a.cantidad;
+  if (a.tipo === 'ticker') return (PRECIOS[a.ticker] || 0) * a.cantidad;
+  if (a.tipo === 'manual' || a.tipo === 'cd') return a.valor || 0;
+  return 0;
+}
+
+function calcFlujo() {
+  const now = new Date();
+  const dias = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const pct = now.getDate() / dias;
+  return pct;
+}
+
+function fmt(n) { return '$' + Math.round(n).toLocaleString('es-MX'); }
+function fmtD(n, d=2) { return '$' + n.toLocaleString('es-MX', {minimumFractionDigits:d, maximumFractionDigits:d}); }
+
+function renderUI() {
+  const ap = {};
+  APORTES.forEach(a => { ap[a.capital] = (ap[a.capital]||0) + a.monto; });
+
+  // Calcular totales
+  let total = 0, sinInmueble = 0;
+  const capitalTotals = { CD:0, CL:0, CO:0, CT:0 };
+
+  ACTIVOS.forEach(a => {
+    const v = calcValorActivo(a) + (ap[a.capital]||0) / Object.keys(ap).length * 0; // aportes se suman al total global
+    capitalTotals[a.capital] = (capitalTotals[a.capital]||0) + calcValorActivo(a);
+    total += calcValorActivo(a);
+    if (a.tipo !== 'cd') sinInmueble += calcValorActivo(a);
+  });
+  // Aportes van al total directamente
+  Object.values(ap).forEach(v => total += v);
+
+  document.getElementById('totalAmt').textContent = fmt(total);
+  document.getElementById('totalSin').textContent = fmt(sinInmueble);
+
+  // Rates
+  const btcPrecio = PRECIOS['bitcoin'];
+  const gbmPrecio = PRECIOS['GBMF2BF.MX'];
+  const ratesEl = document.getElementById('rates');
+  ratesEl.innerHTML = `
+    <div class="rate-pill">USD/MXN<span>${fmtD(PRECIO_FX, 2)}</span></div>
+    ${btcPrecio ? `<div class="rate-pill">BTC/USD<span>$${Math.round(btcPrecio/PRECIO_FX).toLocaleString('en-US')}</span></div>` : ''}
+    ${gbmPrecio ? `<div class="rate-pill">GBMF2<span>${fmtD(gbmPrecio, 4)}</span></div>` : ''}
+  `;
+
+  const allPricesOk = ACTIVOS.filter(a => a.tipo === 'crypto' || a.tipo === 'ticker')
+    .every(a => a.tipo === 'crypto' ? (PRECIOS[a.coinId] && PRECIOS[a.coinId] !== FALLBACK[a.coinId]) : (PRECIOS[a.ticker] && PRECIOS[a.ticker] !== FALLBACK[a.ticker]));
+
+  document.getElementById('totalSub').innerHTML =
+    `<span class="dot ${allPricesOk ? 'live' : ''}"></span>${allPricesOk ? 'Datos en vivo' : 'Datos de respaldo'} · FX ${fmtD(PRECIO_FX, 2)}`;
+
+  // Cards
+  const flujoFrac = calcFlujo();
+  const cardsEl = document.getElementById('cards');
+  cardsEl.innerHTML = ACTIVOS.map(a => {
+    const val = calcValorActivo(a);
+    const pct = total > 0 ? (val/total*100).toFixed(1) : '0.0';
+    const deleteBtn = !a.protegido ? `<button class="card-delete" onclick="eliminarActivo('${a.id}')">×</button>` : '';
+    let extra = '';
+
+    if (a.tipo === 'cd' && a.flujoMensual) {
+      const acum = Math.round(a.flujoMensual * flujoFrac);
+      extra = `
+        <div class="flujo-bar">
+          <div class="flujo-lbl"><span>Flujo · $${a.flujoMensual.toLocaleString('es-MX')} MXN/mes</span><span>$${acum.toLocaleString('es-MX')} acumulado</span></div>
+          <div class="flujo-prog"><div class="flujo-fill" style="width:${flujoFrac*100}%"></div></div>
+        </div>`;
+    }
+    if (a.tipo === 'cd' || a.tipo === 'manual') {
+      extra += `
+        <div class="inline-edit">
+          <input type="number" id="edit_${a.id}" placeholder="Actualizar valor (MXN)..."/>
+          <button class="btn-sm" onclick="actualizarValorCD('${a.id}')">Guardar</button>
+        </div>`;
+    }
+
+    return `
+      <div class="card">
+        ${deleteBtn}
+        <div class="card-header">
+          <div>
+            <div class="card-tag">${a.capital} · ${a.tipo.toUpperCase()}</div>
+            <div class="card-name">${a.nombre}</div>
+            <div class="card-detail">${a.desc || ''}</div>
+          </div>
+          <div class="card-pct">${pct}%</div>
+        </div>
+        <div class="card-amt ${a.color}">${fmt(val)}</div>
+        ${extra}
+      </div>`;
+  }).join('');
+
+  renderHistorial();
+}
+
+// ═══ APORTES ═══════════════════════════════════════════════
+function registrarAporte() {
+  const capital = document.getElementById('apCapital').value;
+  const monto   = parseFloat(document.getElementById('apMonto').value);
+  const desc    = document.getElementById('apDesc').value.trim();
+  if (!monto || monto <= 0) return;
+  APORTES.unshift({
+    id: Date.now(), capital, monto,
+    desc: desc || 'Aportación manual',
+    fecha: new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'})
+  });
+  localStorage.setItem('aportes', JSON.stringify(APORTES));
+  document.getElementById('apMonto').value = '';
+  document.getElementById('apDesc').value = '';
+  cargarDatos();
+}
+
+function eliminarAporte(id) {
+  APORTES = APORTES.filter(a => a.id !== id);
+  localStorage.setItem('aportes', JSON.stringify(APORTES));
+  renderHistorial();
+  cargarDatos();
+}
+
+function renderHistorial() {
+  const el = document.getElementById('historial');
+  if (!APORTES.length) { el.innerHTML = '<div class="empty">Sin aportes registrados</div>'; return; }
+  el.innerHTML = APORTES.map(a => `
+    <div class="h-item">
+      <div class="h-left">
+        <span class="h-cap">${a.capital}</span>
+        <span class="h-desc">${a.desc}</span>
+        <span class="h-date">${a.fecha}</span>
+      </div>
+      <div style="display:flex;align-items:center">
+        <span class="h-amt">${fmt(a.monto)}</span>
+        <button class="h-del" onclick="eliminarAporte(${a.id})">×</button>
+      </div>
+    </div>`).join('');
+}
+
+// ═══ FECHA ═════════════════════════════════════════════════
+function updateFecha() {
+  document.getElementById('fecha').textContent =
+    new Date().toLocaleDateString('es-MX', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+}
+
+// ═══ SERVICE WORKER ════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ═══ INIT ══════════════════════════════════════════════════
+document.getElementById('portNombre').textContent = PREF.nombre;
+document.title = PREF.nombre;
+aplicarTema();
+aplicarFuente();
+updateFecha();
+cargarDatos();
+</script>
+</body>
+</html>
