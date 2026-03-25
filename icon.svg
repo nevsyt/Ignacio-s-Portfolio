@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#000000"/>
+  <!-- barra izquierda -->
+  <rect x="220" y="380" width="160" height="420" rx="36" ry="36" fill="#ff0000"/>
+  <!-- barra central -->
+  <rect x="432" y="200" width="160" height="600" rx="36" ry="36" fill="#ff0000"/>
+  <!-- barra derecha -->
+  <rect x="644" y="540" width="160" height="260" rx="36" ry="36" fill="#ff0000"/>
+</svg>
