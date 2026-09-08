@@ -574,6 +574,9 @@ header{display:flex;justify-content:space-between;align-items:center;
       <label>Activo</label>
       <select id="qmActivo" onchange="onQmActivoChg()"></select>
     </div>
+    <div class="row2"><div class="fg"><label id="qmMontoLbl">Monto</label><input type="number" min="0" step="any" id="qmMonto" placeholder="0.00" oninput="onQmMontoChg()"/></div><div class="fg"><label>Moneda</label><select id="qmCurr" onchange="onQmMontoChg()"><option value="MXN">MXN</option><option value="USD">USD</option></select></div></div>
+    <div id="qmEquivalent" aria-live="polite" style="font-size:14px;margin-bottom:16px"></div>
+    <details id="qmDetails"><summary style="cursor:pointer;margin-bottom:16px">Detalles opcionales</summary>
     <div class="fg" id="qmPrecioWrap" style="display:none">
       <label id="qmPrecioLbl">Precio (USD/BTC)</label>
       <input type="number" id="qmPrecio" placeholder="ej. 85000" oninput="onQmPrecioChg()"/>
@@ -582,8 +585,8 @@ header{display:flex;justify-content:space-between;align-items:center;
       <label id="qmBtcLbl">Cantidad (BTC)</label>
       <input type="number" id="qmBtc" placeholder="0.00000000" step="any" oninput="onQmBtcChg()"/>
     </div>
-    <div class="fg"><label id="qmMontoLbl">Monto (MXN)</label><input type="number" id="qmMonto" placeholder="0.00" oninput="onQmMontoChg()"/></div>
     <div class="fg"><label>Concepto</label><input type="text" id="qmDesc" placeholder="opcional"/></div>
+    </details>
     <button class="btn-p" onclick="saveQuickMov()">Guardar</button>
   </div>
 </div>
@@ -992,6 +995,10 @@ function openActivo(capId){
   const _tpc=document.getElementById('aTPECurr');if(_tpc)_tpc.value='MXN';
   const _tpa=document.getElementById('aTPActCurr');if(_tpa)_tpa.value='USD';
   document.getElementById('aDelRow').style.display='none';
+  if(CAPS.some(c=>c.id===capId&&c.sigla.toUpperCase()==='CV')){
+    document.getElementById('aNom').value='VTI';document.getElementById('aTipo').value='ticker';document.getElementById('aTick').value='VTI';
+  }
+  document.querySelectorAll('#ovlActivo details').forEach(d=>d.open=false);
   tipoChg();oo('ovlActivo');
 }
 function editActivo(id){
@@ -1097,6 +1104,7 @@ function unitLabel(a){
 function precioActual(a){
   if(a.tipo==='crypto')return PR[a.coinId]||((a.precioPromed||0)*FX)||0;
   if(a.tipo==='ticker'){
+    if(a.ticker==='VTI'&&PR.VTI>0)return PR.VTI;
     if(a.pActManual>0)return a.pActCurr==='MXN'?a.pActManual:a.pActManual*FX;
     return PR[a.ticker]||a.precioEntrada||0;
   }
@@ -1462,7 +1470,7 @@ function renderMovHist(){
 async function loadData(){
   const sp=document.getElementById('sp');sp.classList.add('on');
   const coins=[...new Set(ACTS.filter(a=>a.tipo==='crypto').map(a=>a.coinId))];
-  const ticks=[...new Set(ACTS.filter(a=>a.tipo==='ticker').map(a=>a.ticker))];
+  const ticks=[...new Set(['VTI',...ACTS.filter(a=>a.tipo==='ticker').map(a=>a.ticker)])];
   coins.forEach(id=>{if(!PR[id]&&FB[id])PR[id]=FB[id];});
   ticks.forEach(t=>{if(!PR[t]&&FB[t])PR[t]=FB[t];});
   if(coins.length){try{
@@ -1489,18 +1497,24 @@ async function loadData(){
     }catch(e){}
   }
   try{const r=await fetch('https://open.er-api.com/v6/latest/USD',{signal:AbortSignal.timeout(5000)});const d=await r.json();if(d.rates?.MXN)FX=d.rates.MXN;}catch(e){}
+  try{
+    const r=await fetch('./vti-quote.json?t='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(5000)});
+    const q=await r.json();
+    if(q?.price>0&&q?.marketTime){rememberVTI({regularMarketPrice:q.price,regularMarketTime:q.marketTime});PR.VTI=q.price*FX;}
+  }catch(e){}
   for(const t of ticks){
+    if(t==='VTI'&&PR.VTI>0)continue;
     let got=false;
     for(const h of['query1','query2']){try{
       const r=await fetch(`https://${h}.finance.yahoo.com/v8/finance/chart/${t}?interval=1d&range=1d`,{signal:AbortSignal.timeout(5000)});
       const d=await r.json();const meta=d?.chart?.result?.[0]?.meta;const p=meta?.regularMarketPrice;
-      if(p&&p>0){PR[t]=(meta?.currency==='USD'&&FX>0)?p*FX:p;got=true;break;}
+      if(p&&p>0){PR[t]=(meta?.currency==='USD'&&FX>0)?p*FX:p;if(t==='VTI')rememberVTI(meta);got=true;break;}
     }catch(e){}}
     if(!got){try{
       const yUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${t}?interval=1d&range=1d`;
       const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(yUrl)}`,{signal:AbortSignal.timeout(8000)});
       const d=await r.json();const meta=d?.chart?.result?.[0]?.meta;const p=meta?.regularMarketPrice;
-      if(p&&p>0)PR[t]=(meta?.currency==='USD'&&FX>0)?p*FX:p;
+      if(p&&p>0){PR[t]=(meta?.currency==='USD'&&FX>0)?p*FX:p;if(t==='VTI')rememberVTI(meta);}
     }catch(e){}}
   }
   snapToday();
@@ -1711,7 +1725,7 @@ function renderUI(){
   document.getElementById('rates').innerHTML=
     `<div class="rpill">USD/MXN<span>$${FX.toFixed(2)}</span></div>`+
     (bp?`<div class="rpill">BTC/USD<span>$${Math.round(bp/FX).toLocaleString('en-US')}</span></div>`:'')+
-    `<div class="rpill" onclick="editGbmf2Pct()" style="cursor:pointer">GBMF2<span>${gbmf2Lbl}</span></div>`+
+    `<div class="rpill">VTI/USD<span>${vtiLabel()}</span></div>`+
     (INFL!=null?`<div class="rpill">INFL MX<span>${INFL.toFixed(2)}%</span></div>`:'');
   renderRendAnual(total);renderPoderAdq(total);renderCharts(total);renderGroups(total);
   if(CURRENT_PAGE==='progreso')renderProgreso();
@@ -2073,6 +2087,10 @@ function toggleExtraMovs(capId,btn){
   btn.textContent=open?'▴ Ocultar':`▾ Ver todos`;
 }
 function openQuickMov(capId,tipo){
+  const cv=CAPS.find(c=>c.id===capId&&c.sigla.toUpperCase()==='CV');
+  if(cv&&!ACTS.some(a=>a.capital===capId&&a.ticker==='VTI'))ACTS.push({id:'vti_'+Date.now(),nombre:'VTI',capital:capId,tipo:'ticker',ticker:'VTI',cantidad:0,color:'c-blue'});
+  document.getElementById('qmCurr').value='MXN';
+  document.getElementById('qmDetails').open=false;
   document.getElementById('qmCapId').value=capId;
   document.getElementById('qmTipo').value=tipo;
   document.getElementById('qmTitle').textContent=tipo==='aporte'?'Aporte':'Retiro';
@@ -2085,6 +2103,8 @@ function openQuickMov(capId,tipo){
   const actsDelCap=ACTS.filter(a=>a.capital===capId);
   const sel=document.getElementById('qmActivo');
   sel.innerHTML=actsDelCap.length?actsDelCap.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join(''):'<option value="">— Sin activos —</option>';
+  if(cv)sel.value=actsDelCap.find(a=>a.ticker==='VTI').id;
+  document.getElementById('qmActivoWrap').style.display=actsDelCap.length===1?'none':'';
   onQmActivoChg();
   oo('ovlQuickMov');
 }
@@ -2096,19 +2116,24 @@ function onQmActivoChg(){
   document.getElementById('qmBtcWrap').style.display='none';
   if(!aId)return;
   const a=ACTS.find(x=>x.id===aId);
-  if(a&&a.tipo==='crypto'){
+  if(a&&(a.tipo==='crypto'||a.tipo==='ticker')){
     document.getElementById('qmPrecioLbl').textContent=`Precio (USD/${(a.coinId||'BTC').toUpperCase()})`;
     document.getElementById('qmBtcLbl').textContent=`Cantidad (${(a.coinId||'BTC').toUpperCase()})`;
-    const precioActualUSD=PR[a.coinId]?Math.round(PR[a.coinId]/FX):0;
+    const key=a.coinId||a.ticker;
+    document.getElementById('qmPrecioLbl').textContent='Precio por unidad (USD)';
+    document.getElementById('qmBtcLbl').textContent='Unidades de '+key;
+    const precioActualUSD=PR[key]?PR[key]/FX:0;
     document.getElementById('qmPrecio').value=precioActualUSD||'';
     document.getElementById('qmPrecioWrap').style.display='block';
     document.getElementById('qmBtcWrap').style.display='block';
   }
+  onQmMontoChg();
 }
+function qmMXN(){return (Number(document.getElementById('qmMonto').value)||0)*(document.getElementById('qmCurr').value==='USD'?FX:1);}
 function onQmPrecioChg(){
   // Al cambiar precio, recalcular BTC desde MXN
   const precio=parseFloat(document.getElementById('qmPrecio').value)||0;
-  const monto=parseFloat(document.getElementById('qmMonto').value)||0;
+  const monto=qmMXN();
   if(precio>0&&monto>0){
     document.getElementById('qmBtc').value=((monto/FX)/precio).toFixed(8);
   }
@@ -2116,7 +2141,9 @@ function onQmPrecioChg(){
 function onQmMontoChg(){
   // Al cambiar MXN, recalcular BTC
   const precio=parseFloat(document.getElementById('qmPrecio').value)||0;
-  const monto=parseFloat(document.getElementById('qmMonto').value)||0;
+  const monto=qmMXN();
+  document.getElementById('qmEquivalent').textContent=document.getElementById('qmCurr').value==='USD'?`Equivale a $${monto.toLocaleString('es-MX',{maximumFractionDigits:2})} MXN · tipo de cambio de referencia $${FX.toFixed(4)}`:'';
+  document.getElementById('qmBtc').value='';
   if(precio>0&&monto>0){
     document.getElementById('qmBtc').value=((monto/FX)/precio).toFixed(8);
   }
@@ -2126,29 +2153,34 @@ function onQmBtcChg(){
   const precio=parseFloat(document.getElementById('qmPrecio').value)||0;
   const btc=parseFloat(document.getElementById('qmBtc').value)||0;
   if(precio>0&&btc>0){
-    document.getElementById('qmMonto').value=(btc*precio*FX).toFixed(2);
+    document.getElementById('qmMonto').value=(btc*precio*(document.getElementById('qmCurr').value==='USD'?1:FX)).toFixed(2);
+    document.getElementById('qmEquivalent').textContent=`Equivale a $${qmMXN().toFixed(2)} MXN`;
   }
 }
 function saveQuickMov(){
   const capId=document.getElementById('qmCapId').value;
   const tipo=document.getElementById('qmTipo').value;
-  const monto=parseFloat(document.getElementById('qmMonto').value)||0;
+  const monto=qmMXN();
   const desc=document.getElementById('qmDesc').value.trim();
   const activoId=document.getElementById('qmActivo').value;
-  if(!monto||monto<=0)return;
+  if(!Number.isFinite(monto)||monto<=0)return;
+  const selected=ACTS.find(a=>a.id===activoId);
+  if(tipo==='retiro'&&selected&&monto>val(selected)+0.01){toast('El retiro supera el saldo disponible.');return;}
   const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
   const mov={id:Date.now(),tipo,monto,desc,fecha,capital:capId,soloHistorial:!activoId};
+  mov.moneda=document.getElementById('qmCurr').value;mov.montoOriginal=Number(document.getElementById('qmMonto').value);mov.tipoCambio=FX;
   if(activoId){
     const a=ACTS.find(x=>x.id===activoId);
     if(a){
       mov.activoId=activoId;
-      mov._snap={valor:a.valor||0,cantidad:a.cantidad||0,precioPromed:a.precioPromed||0,desc:a.desc||''};
+      mov._snap={valor:a.valor||0,valorUSD:a.valorUSD,baseUSD:a.baseUSD,cantidad:a.cantidad||0,precioEntrada:a.precioEntrada,precioPromed:a.precioPromed||0,desc:a.desc||''};
       if(a.tipo==='crypto'){
         const precioUSD=parseFloat(document.getElementById('qmPrecio').value)||PR[a.coinId]/FX||0;
         const precioMXN=precioUSD*FX;
         const btcDirecto=parseFloat(document.getElementById('qmBtc').value)||0;
         const unidades=btcDirecto>0?btcDirecto:(precioMXN>0?monto/precioMXN:0);
         if(unidades<=0){toast('Sin precio disponible. Ingresa el precio o la cantidad manualmente.');return;}
+        if(tipo==='retiro'&&unidades>(a.cantidad||0)+1e-10){toast('No tienes suficientes unidades.');return;}
         if(tipo==='aporte'){
           const oldQ=a.cantidad||0;const oldP=a.precioPromed||0;const newQ=oldQ+unidades;
           a.precioPromed=newQ>0?(oldP*oldQ+precioUSD*unidades)/newQ:precioUSD;
@@ -2171,9 +2203,10 @@ function saveQuickMov(){
         a.valorUSD=(a.valorUSD||0)+(tipo==='aporte'?montoUSD:-montoUSD);
         a.valorUSD=Math.max(0,a.valorUSD);
       } else if(a.tipo==='ticker'){
-        const p=PR[a.ticker]||a.precioEntrada||0;
+        const p=(Number(document.getElementById('qmPrecio').value)||0)*FX||PR[a.ticker]||0;
         if(p<=0){toast(`Sin precio disponible para ${a.nombre}. Regístralo desde "Movimiento" con unidades y precio manual.`);return;}
         const unidades=monto/p;
+        if(tipo==='retiro'&&unidades>(a.cantidad||0)+1e-10){toast('No tienes suficientes títulos.');return;}
         if(tipo==='aporte') a.cantidad=(a.cantidad||0)+unidades;
         else a.cantidad=Math.max(0,(a.cantidad||0)-unidades);
         a.desc=`${a.cantidad.toFixed(2)} ${a.ticker||'títulos'}`;
@@ -3541,6 +3574,53 @@ function renderProgreso(){
     </div>
   </div>`;
 }
+
+// VTI quotes retain their market timestamp; a refresh is not a real-time guarantee.
+let vtiQuote=JSON.parse(localStorage.getItem('vtiQuote')||'null');
+function rememberVTI(meta){
+  vtiQuote={usd:meta.regularMarketPrice,time:meta.regularMarketTime*1000,fetchedAt:Date.now()};
+  localStorage.setItem('vtiQuote',JSON.stringify(vtiQuote));
+}
+function vtiLabel(){
+  if(!vtiQuote)return 'Sin cotización';
+  const stale=Date.now()-vtiQuote.fetchedAt>120000;
+  return `$${vtiQuote.usd.toFixed(2)} · ${new Date(vtiQuote.time).toLocaleString('es-MX',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}${stale?' · guardado':''}`;
+}
+let quoteBusy=false;
+async function refreshVTI(){
+  if(document.hidden||quoteBusy)return;
+  quoteBusy=true;
+  try{
+    const r=await fetch('./vti-quote.json?t='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(8000)});
+    if(!r.ok)throw new Error('Quote unavailable');
+    const q=await r.json();
+    if(!(q?.price>0)||!q.marketTime)throw new Error('Invalid quote');
+    rememberVTI({regularMarketPrice:q.price,regularMarketTime:q.marketTime});PR.VTI=q.price*FX;
+    localStorage.setItem('prCache',JSON.stringify(PR));
+  }catch(e){}finally{quoteBusy=false;renderUI();}
+}
+setInterval(refreshVTI,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshVTI();});
+
+// Keep advanced asset fields available, but out of the everyday form.
+function simplifyAssetForm(){
+  const advanced=document.createElement('details');advanced.innerHTML='<summary style="cursor:pointer;margin:12px 0;font-size:14px">Más opciones</summary>';
+  const colorRow=document.getElementById('aCol').closest('.row2');
+  colorRow.before(advanced);advanced.append(colorRow,document.getElementById('aDesc').closest('.fg'));
+  for(const group of ['fCrypto','fTicker']){
+    const wrap=document.getElementById(group);const rows=[...wrap.children].slice(1);
+    const detail=document.createElement('details');detail.innerHTML='<summary style="cursor:pointer;margin:12px 0;font-size:14px">Costo de compra y precio manual</summary>';
+    wrap.append(detail);rows.forEach(row=>detail.append(row));
+  }
+  const pairs=[['aMVal','aMValCurr'],['aCDV','aCDVCurr'],['aTPE','aTPECurr'],['aTPAct','aTPActCurr'],['aPE','aPECurr']];
+  for(const [amount,currency] of pairs){
+    const input=document.getElementById(amount),sel=document.getElementById(currency),note=document.createElement('div');
+    note.style.cssText='font-size:14px;margin-bottom:12px';note.setAttribute('aria-live','polite');input.closest('.row2').after(note);
+    const update=()=>{note.textContent=sel.value==='USD'&&input.value?`Equivale a $${(Number(input.value)*FX).toLocaleString('es-MX',{maximumFractionDigits:2})} MXN`:'';};
+    input.addEventListener('input',update);sel.addEventListener('change',update);
+  }
+}
+simplifyAssetForm();
 
 // ═══ INIT ═════════════════════════════════════════════════
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});

@@ -1,4 +1,4 @@
-const CACHE = 'portafolio-v1';
+const CACHE = 'portafolio-v2';
 const ASSETS = ['./index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
