@@ -142,15 +142,16 @@ header{display:flex;justify-content:space-between;align-items:center;
   padding:13px 14px;background:var(--surface);border-bottom:1px solid var(--border);cursor:pointer;
   transition:background .15s ease}
 .cap-hd:active{background:var(--surface2)}
-.cap-l{display:flex;align-items:center;gap:10px;min-width:0}
+.cap-l{display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden}
+.cap-l>div:last-child{min-width:0;flex:1;overflow:hidden}
 .cap-badge{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;
   padding:4px 8px;border-radius:5px}
 .cap-nm{font-size:16px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cap-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cap-r{display:grid;grid-template-columns:68px 106px 10px;align-items:center;gap:7px;width:198px;flex-shrink:0}
+.cap-r{display:grid;grid-template-columns:54px 100px 8px;align-items:center;gap:5px;width:172px;flex-shrink:0}
 .cap-tot{font-family:var(--num);font-size:14px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;font-feature-settings:"tnum";text-align:right;white-space:nowrap}
-.cap-currency{display:flex;width:68px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
-.cap-currency button{flex:1;border:0;background:transparent;color:var(--muted);font:600 9px var(--font);padding:5px 0;cursor:pointer}
+.cap-currency{display:flex;width:54px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.cap-currency button{flex:1;border:0;background:transparent;color:var(--muted);font:600 7px var(--font);padding:4px 0;cursor:pointer}
 .cap-currency button.on{background:var(--text);color:var(--bg)}
 .chev{font-size:10px;color:var(--muted);transition:transform .25s cubic-bezier(.4,0,.2,1)}
 .chev.op{transform:rotate(180deg)}
