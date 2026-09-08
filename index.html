@@ -1497,7 +1497,13 @@ async function loadData(){
     }catch(e){}
   }
   try{const r=await fetch('https://open.er-api.com/v6/latest/USD',{signal:AbortSignal.timeout(5000)});const d=await r.json();if(d.rates?.MXN)FX=d.rates.MXN;}catch(e){}
+  try{
+    const r=await fetch('./vti-quote.json?t='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(5000)});
+    const q=await r.json();
+    if(q?.price>0&&q?.marketTime){rememberVTI({regularMarketPrice:q.price,regularMarketTime:q.marketTime});PR.VTI=q.price*FX;}
+  }catch(e){}
   for(const t of ticks){
+    if(t==='VTI'&&PR.VTI>0)continue;
     let got=false;
     for(const h of['query1','query2']){try{
       const r=await fetch(`https://${h}.finance.yahoo.com/v8/finance/chart/${t}?interval=1d&range=1d`,{signal:AbortSignal.timeout(5000)});
@@ -3585,12 +3591,11 @@ async function refreshVTI(){
   if(document.hidden||quoteBusy)return;
   quoteBusy=true;
   try{
-    const url='https://query1.finance.yahoo.com/v8/finance/chart/VTI?interval=1d&range=1d';
-    const r=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url),{signal:AbortSignal.timeout(8000)});
+    const r=await fetch('./vti-quote.json?t='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(8000)});
     if(!r.ok)throw new Error('Quote unavailable');
-    const d=await r.json();const meta=d?.chart?.result?.[0]?.meta;
-    if(!(meta?.regularMarketPrice>0)||!meta.regularMarketTime)throw new Error('Invalid quote');
-    rememberVTI(meta);PR.VTI=meta.regularMarketPrice*FX;
+    const q=await r.json();
+    if(!(q?.price>0)||!q.marketTime)throw new Error('Invalid quote');
+    rememberVTI({regularMarketPrice:q.price,regularMarketTime:q.marketTime});PR.VTI=q.price*FX;
     localStorage.setItem('prCache',JSON.stringify(PR));
   }catch(e){}finally{quoteBusy=false;renderUI();}
 }
