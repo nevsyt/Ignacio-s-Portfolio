@@ -14,10 +14,10 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0a0a0a;--surface:#111;--surface2:#181818;--surface3:#1f1f1f;--border:#222;--border2:#2a2a2a;
+  --bg:#212121;--surface:#2f2f2f;--surface2:#171717;--surface3:#424242;--border:#424242;--border2:#4a4a4a;
   --accent:#c8f135;--accent-dim:rgba(200,241,53,0.08);
-  --text:#f0f0f0;--text2:#aaa;--muted:#555;--red:#ff4d4d;--green:#4dff91;
-  --font:'Inter',sans-serif;--mono:'Roboto Mono',monospace;--num:'Inter',sans-serif;
+  --text:#f4f4f4;--text2:#b4b4b4;--muted:#8e8e8e;--red:#ff4d4d;--green:#4dff91;
+  --font:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;--mono:'Roboto Mono',monospace;--num:var(--font);
   --safe-t:env(safe-area-inset-top);--safe-b:env(safe-area-inset-bottom);
 }
 html{height:100%;-webkit-text-size-adjust:100%}
@@ -149,6 +149,9 @@ header{display:flex;justify-content:space-between;align-items:center;
 .cap-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px}
 .cap-r{display:flex;align-items:center;gap:8px}
 .cap-tot{font-family:var(--num);font-size:14px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.cap-currency{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.cap-currency button{border:0;background:transparent;color:var(--muted);font:600 9px var(--font);padding:5px 7px;cursor:pointer}
+.cap-currency button.on{background:var(--text);color:var(--bg)}
 .chev{font-size:10px;color:var(--muted);transition:transform .25s cubic-bezier(.4,0,.2,1)}
 .chev.op{transform:rotate(180deg)}
 .cap-body{background:var(--surface2)}
@@ -912,18 +915,25 @@ function saveP(){localStorage.setItem('cfg',JSON.stringify({...CFG,...PREF}));}
 function aplicarTema(){
   const b=document.getElementById('body'),dk=PREF.tema==='dark';
   const vars={
-    '--bg':dk?'#0a0a0a':'#f0f0eb','--surface':dk?'#111':'#ffffff','--surface2':dk?'#181818':'#f5f5f0',
-    '--surface3':dk?'#1f1f1f':'#eaeae4','--border':dk?'#222':'#d8d8d0','--border2':dk?'#2a2a2a':'#cacac2',
-    '--text':dk?'#f0f0f0':'#111111','--text2':dk?'#aaa':'#444444','--muted':dk?'#555':'#777777',
+    '--bg':dk?'#212121':'#f0f0eb','--surface':dk?'#2f2f2f':'#ffffff','--surface2':dk?'#171717':'#f5f5f0',
+    '--surface3':dk?'#424242':'#eaeae4','--border':dk?'#424242':'#d8d8d0','--border2':dk?'#4a4a4a':'#cacac2',
+    '--text':dk?'#f4f4f4':'#111111','--text2':dk?'#b4b4b4':'#444444','--muted':dk?'#8e8e8e':'#777777',
     '--red':dk?'#ff4d4d':'#cc0000','--green':dk?'#4dff91':'#008833',
   };
   Object.entries(vars).forEach(([k,v])=>b.style.setProperty(k,v));
   const col=COLORS.find(c=>c.id===PREF.colorId)||COLORS[0];
   const acc=dk?col.dk:col.lt;
   b.style.setProperty('--accent',acc);b.style.setProperty('--accent-dim',acc+(dk?'14':'22'));
-  document.getElementById('themeColorMeta').content=dk?'#0a0a0a':'#f0f0eb';
+  document.getElementById('themeColorMeta').content=dk?'#212121':'#f0f0eb';
+  aplicarFuente();
 }
 function aplicarFuente(){
+  if(PREF.tema==='dark'){
+    const stack="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+    document.getElementById('body').style.setProperty('--font',stack);
+    document.getElementById('body').style.setProperty('--num',stack);
+    return;
+  }
   const f=FONTS.find(x=>x.id===PREF.fuenteId)||FONTS[0];
   document.getElementById('gFont').href=`https://fonts.googleapis.com/css2?family=${f.g}&family=Roboto+Mono:wght@300;400;500;600&display=swap`;
   document.getElementById('body').style.setProperty('--font',`'${f.nm}',sans-serif`);
@@ -933,6 +943,9 @@ function setTema(t){PREF.tema=t;saveP();aplicarTema();renderPref();}
 function setColor(id){PREF.colorId=id;saveP();aplicarTema();renderPref();}
 function setFont(id){PREF.fuenteId=id;saveP();aplicarFuente();renderPref();}
 function setCurr(c){CURR=c;document.getElementById('btnMXN').classList.toggle('on',c==='MXN');document.getElementById('btnUSD').classList.toggle('on',c==='USD');renderUI();}
+let CAP_CURR=JSON.parse(localStorage.getItem('capCurr')||'{}');
+function capFmt(mxn,capId,d=0){const c=CAP_CURR[capId]||'MXN',v=c==='USD'?mxn/FX:mxn;return'$'+v.toLocaleString(c==='USD'?'en-US':'es-MX',{minimumFractionDigits:d,maximumFractionDigits:d})+'\u202F'+c;}
+function setCapCurr(capId,c,e){if(e)e.stopPropagation();CAP_CURR[capId]=c;localStorage.setItem('capCurr',JSON.stringify(CAP_CURR));renderGroups(calcTotal());}
 function chgNom(){PREF.nombre=document.getElementById('prefNom').value.trim()||'Portafolio';document.getElementById('portNom').textContent=PREF.nombre;document.getElementById('pinLogo').textContent=PREF.nombre;document.title=PREF.nombre;saveP();}
 function renderPref(){
   document.getElementById('prefNom').value=PREF.nombre;
@@ -1936,6 +1949,7 @@ function renderCharts(total){
 // ═══ GRUPOS DE CAPITAL ════════════════════════════════════
 function renderGroups(total){
   document.getElementById('capGroups').innerHTML=CAPS.map(cap=>{
+    const capCurr=CAP_CURR[cap.id]||'MXN';
     const acts=ACTS.filter(a=>a.capital===cap.id);
     const mc=movsCap(cap.id);
     const ct=acts.reduce((s,a)=>s+val(a),0)+mc;
@@ -1945,10 +1959,10 @@ function renderGroups(total){
     const actsHTML=acts.map(a=>{
       const av=val(a);const apct=total>0?(av/total*100).toFixed(1):'0.0';
       const r=rend(a);
-      const rendHTML=r?`<div class="a-rend ${r.pct>0?'pos':r.pct<0?'neg':'neu'}">${r.pct>0?'+':''}${r.pct.toFixed(2)}% · ${r.dif>0?'+':''}${fmt(r.dif)}</div>`:'';
+      const rendHTML=r?`<div class="a-rend ${r.pct>0?'pos':r.pct<0?'neg':'neu'}">${r.pct>0?'+':''}${r.pct.toFixed(2)}% · ${r.dif>0?'+':''}${capFmt(r.dif,cap.id)}</div>`:'';
       let extra='';
       if(a.tipo==='cd'&&a.flujoMensual){
-        extra=`<div class="flujo"><div class="flujo-r"><span>Flujo · $${a.flujoMensual.toLocaleString('es-MX')}/mes</span><span>$${Math.round(a.flujoMensual*flujoFrac).toLocaleString('es-MX')} acum.</span></div><div class="flujo-t"><div class="flujo-f" style="width:${flujoFrac*100}%"></div></div></div>`;
+        extra=`<div class="flujo"><div class="flujo-r"><span>Flujo · ${capFmt(a.flujoMensual,cap.id)}/mes</span><span>${capFmt(a.flujoMensual*flujoFrac,cap.id)} acum.</span></div><div class="flujo-t"><div class="flujo-f" style="width:${flujoFrac*100}%"></div></div></div>`;
       }
       if(a.intMensual&&a.intMeses){
         const pagos=MOVS.filter(m=>m.interes&&m.activoId===a.id);
@@ -1977,7 +1991,7 @@ function renderGroups(total){
       }
       return `<div class="asset">
         <div class="a-l"><div class="a-tag">${a.tipo==='manualUSD'?'USD':a.tipo.toUpperCase()}</div><div class="a-nm">${a.nombre}</div>${a.tipo==='crypto'&&a.precioPromed?`<div class="a-det" style="color:var(--muted)">Entrada: $${Math.round(a.precioPromed).toLocaleString('en-US')} USD</div>`:''}${a.tipo==='ticker'&&a.precioEntrada?`<div class="a-det" style="color:var(--muted)">Entrada: $${a.precioEntrada.toFixed(4)}</div>`:''}${a.tipo==='manualUSD'?`<div class="a-det" style="color:var(--muted)">Base: $${(a.baseUSD||0).toLocaleString('en-US',{minimumFractionDigits:2})} USD</div><div class="a-det" style="color:var(--text2)">Actual: $${(a.valorUSD||0).toLocaleString('en-US',{minimumFractionDigits:2})} USD</div>`:''}<div class="a-det">${a.desc||''}</div>${extra}</div>
-        <div class="a-r"><div class="a-amt ${a.color}">${fmt(av)}</div><div class="a-pct">${apct}%</div>${rendHTML}<button class="a-btn" onclick="editActivo('${a.id}')">✎ Editar</button></div>
+        <div class="a-r"><div class="a-amt ${a.color}">${capFmt(av,cap.id)}</div><div class="a-pct">${apct}%</div>${rendHTML}<button class="a-btn" onclick="editActivo('${a.id}')">✎ Editar</button></div>
       </div>`;
     }).join('');
     // Historial de movimientos del capital
@@ -2033,7 +2047,7 @@ function renderGroups(total){
     return `<div class="cap-grp">
       <div class="cap-hd" onclick="togCap('${cap.id}')">
         <div class="cap-l"><div class="cap-badge ${cap.color}">${cap.sigla}</div><div><div class="cap-nm">${cap.nombre}</div><div class="cap-sub">${pct}% del portafolio</div></div></div>
-        <div class="cap-r"><div class="cap-tot">${fmt(ct)}</div><div class="chev ${isOpen?'op':''}">▼</div></div>
+        <div class="cap-r"><div class="cap-currency" onclick="event.stopPropagation()"><button class="${capCurr==='MXN'?'on':''}" onclick="setCapCurr('${cap.id}','MXN',event)">MXN</button><button class="${capCurr==='USD'?'on':''}" onclick="setCapCurr('${cap.id}','USD',event)">USD</button></div><div class="cap-tot">${capFmt(ct,cap.id)}</div><div class="chev ${isOpen?'op':''}">▼</div></div>
       </div>
       <div class="cap-body" id="cb_${cap.id}" style="${isOpen?'':'display:none'}">
         ${actsHTML}${mcHTML}${plCapHTML}
@@ -3583,8 +3597,7 @@ function rememberVTI(meta){
 }
 function vtiLabel(){
   if(!vtiQuote)return 'Sin cotización';
-  const stale=Date.now()-vtiQuote.fetchedAt>120000;
-  return `$${vtiQuote.usd.toFixed(2)} · ${new Date(vtiQuote.time).toLocaleString('es-MX',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}${stale?' · guardado':''}`;
+  return `$${vtiQuote.usd.toFixed(2)}`;
 }
 let quoteBusy=false;
 async function refreshVTI(){
